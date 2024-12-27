@@ -113,7 +113,7 @@ function InstancedSpheres({ number = 100 }) {
       args: [1],
       mass: 1,
       material: "bouncy",
-      position: [Math.random() - 0.5, Math.random() - 0.5, index * 2],
+      position: [Math.random() - 0.5, Math.random() - 5, index * 2],
     }),
     useRef<InstancedMesh>(null),
   )
@@ -154,7 +154,7 @@ function PhysicsContent() {
 }
 
 export default () => (
-  <Canvas camera={{ position: [0, 0, 25] }} shadows>
+  <Canvas camera={{ position: [0, 0, 40] }} shadows>
     <hemisphereLight intensity={0.35 * Math.PI} />
     <spotLight
       angle={0.3}
