@@ -1,14 +1,14 @@
-import type { PlaneProps, Triplet } from '@react-three/cannon'
-import { Physics, useBox, usePlane, useSphere, useContactMaterial } from '@react-three/cannon'
+import type { PlaneProps } from '@react-three/cannon'
+import { Physics, usePlane, useSphere, useContactMaterial } from '@react-three/cannon'
 import type { MeshPhongMaterialProps } from '@react-three/fiber'
-import { Canvas, useFrame } from '@react-three/fiber'
+import { Canvas } from '@react-three/fiber'
 import { useMemo, useRef } from 'react'
 import type { InstancedMesh, Mesh } from 'three'
 import { Color } from 'three'
 
 import niceColors from './colors'
 
-type OurPlaneProps = Pick<MeshPhongMaterialProps, 'color'> & Pick<PlaneProps, 'position' | 'rotation'>
+type OurPlaneProps = Pick<MeshPhongMaterialProps, 'color'> & Pick<PlaneProps, 'material' | 'position' | 'rotation'>
 
 const bouncyMaterial = {
   name: 'bouncy',
@@ -107,22 +107,6 @@ function Plane({ color, ...props }: OurPlaneProps) {
   )
 }
 
-function Box() {
-  const boxSize: Triplet = [4, 4, 4]
-  const [ref, api] = useBox(() => ({ args: boxSize, mass: 1, type: 'Kinematic' }), useRef<Mesh>(null))
-  useFrame((state) => {
-    const t = state.clock.getElapsedTime()
-    api.position.set(Math.sin(t * 2) * 5, Math.cos(t * 2) * 5, 3)
-    api.rotation.set(Math.sin(t * 6), Math.cos(t * 6), 0)
-  })
-  return (
-    <mesh ref={ref} castShadow receiveShadow>
-      <boxGeometry args={boxSize} />
-      <meshLambertMaterial color="white" />
-    </mesh>
-  )
-}
-
 function InstancedSpheres({ number = 100 }) {
   const [ref] = useSphere(
     (index) => ({
@@ -164,7 +148,6 @@ function PhysicsContent() {
       <Plane color={niceColors[2]} material="ground" position={[10, 0, 0]} rotation={[0, -0.9, 0]} />
       <Plane color={niceColors[3]} material="ground" position={[0, 10, 0]} rotation={[0.9, 0, 0]} />
       <Plane color={niceColors[0]} material="ground" position={[0, -10, 0]} rotation={[-0.9, 0, 0]} />
-      {/* <Box /> */}
       <InstancedSpheres number={100} />
     </group>
   )
