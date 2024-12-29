@@ -1,10 +1,11 @@
 import type { PlaneProps } from '@react-three/cannon'
 import { Physics, usePlane, useSphere, useContactMaterial } from '@react-three/cannon'
 import type { MeshPhongMaterialProps } from '@react-three/fiber'
-import { Canvas } from '@react-three/fiber'
-import { useMemo, useRef } from 'react'
+import { Canvas, useFrame } from '@react-three/fiber'
+import { useMemo, useRef, useState, useEffect } from 'react'
 import type { InstancedMesh, Mesh } from 'three'
 import { Color } from 'three'
+import * as dat from 'dat.gui'
 
 import niceColors from './colors'
 
@@ -107,8 +108,12 @@ function Plane({ color, ...props }: OurPlaneProps) {
   )
 }
 
-function InstancedSpheres({ number = 100 }) {
-  const [ref] = useSphere(
+interface ShakeSettings {
+  shakeStrength: number
+}
+
+function InstancedSpheres({ number = 100, shakeSettings, shake }: { number?: number; shakeSettings: ShakeSettings; shake: boolean }) {
+  const [ref, api] = useSphere(
     (index) => ({
       args: [1],
       mass: 1,
@@ -128,6 +133,21 @@ function InstancedSpheres({ number = 100 }) {
     return array
   }, [number])
 
+  useFrame(() => {
+    if (shake) {
+      for (let i = 0; i < number; i++) {
+        api.at(i).applyImpulse(
+          [
+            (Math.random() - 0.5) * shakeSettings.shakeStrength,
+            (Math.random() - 0.5) * shakeSettings.shakeStrength,
+            (Math.random() - 0.5) * shakeSettings.shakeStrength
+          ],
+          [0, 0, 0]
+        )
+      }
+    }
+  })
+
   return (
     <instancedMesh ref={ref} castShadow receiveShadow args={[undefined, undefined, number]}>
       <sphereGeometry args={[1, 16, 16]}>
@@ -138,7 +158,7 @@ function InstancedSpheres({ number = 100 }) {
   )
 }
 
-function PhysicsContent() {
+function Scene({ shakeSettings, shake }: { shakeSettings: ShakeSettings; shake: boolean }) {
   useContactMaterials(false)
 
   return (
@@ -148,27 +168,55 @@ function PhysicsContent() {
       <Plane color={niceColors[2]} material="ground" position={[10, 0, 0]} rotation={[0, -0.9, 0]} />
       <Plane color={niceColors[3]} material="ground" position={[0, 10, 0]} rotation={[0.9, 0, 0]} />
       <Plane color={niceColors[0]} material="ground" position={[0, -10, 0]} rotation={[-0.9, 0, 0]} />
-      <InstancedSpheres number={100} />
+      <InstancedSpheres number={100} shakeSettings={shakeSettings} shake={shake} />
     </group>
   )
 }
 
-export default () => (
-  <Canvas camera={{ position: [0, 0, 40] }} shadows>
-    <hemisphereLight intensity={0.35 * Math.PI} />
-    <spotLight
-      angle={0.3}
-      castShadow
-      decay={0}
-      intensity={2 * Math.PI}
-      penumbra={1}
-      position={[30, 0, 30]}
-      shadow-mapSize-width={256}
-      shadow-mapSize-height={256}
-    />
-    <pointLight decay={0} intensity={0.5 * Math.PI} position={[-30, 0, -30]} />
-    <Physics gravity={[0, 0, -10]}>
-      <PhysicsContent />
-    </Physics>
-  </Canvas>
-)
+function App() {
+  const [shakeSettings] = useState<ShakeSettings>({
+    shakeStrength: 10,
+  })
+  const [shake, setShake] = useState(false)
+
+  useEffect(() => {
+    const gui = new dat.GUI()
+    const shakeFolder = gui.addFolder('Shake Settings')
+
+    shakeFolder.add(shakeSettings, 'shakeStrength', 1, 20).name('Shake Strength')
+
+    const shakeButton = { shake: () => {
+      setShake(true)
+      setTimeout(() => setShake(false), 100) // Reset shake after a short delay
+    }}
+    shakeFolder.add(shakeButton, 'shake').name('Shake!')
+
+    shakeFolder.open()
+
+    return () => {
+      gui.destroy()
+    }
+  }, [shakeSettings])
+
+  return (
+    <Canvas camera={{ position: [0, 0, 40] }} shadows>
+      <hemisphereLight intensity={0.35 * Math.PI} />
+      <spotLight
+        angle={0.3}
+        castShadow
+        decay={0}
+        intensity={2 * Math.PI}
+        penumbra={1}
+        position={[30, 0, 30]}
+        shadow-mapSize-width={256}
+        shadow-mapSize-height={256}
+      />
+      <pointLight decay={0} intensity={0.5 * Math.PI} position={[-30, 0, -30]} />
+      <Physics gravity={[0, 0, -10]}>
+        <Scene shakeSettings={shakeSettings} shake={shake} />
+      </Physics>
+    </Canvas>
+  )
+}
+
+export default App
