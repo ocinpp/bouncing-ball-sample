@@ -5,7 +5,7 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { useMemo, useRef, useState, useEffect } from 'react'
 import type { InstancedMesh, Mesh } from 'three'
 import { Color } from 'three'
-import * as dat from 'dat.gui'
+import * as dat from 'lil-gui'
 
 import niceColors from './colors'
 
