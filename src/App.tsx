@@ -248,7 +248,7 @@ function App() {
   }, [handleMotion, shakeSettings, motionPermission])
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-dvh">
       {!motionPermission && (
         <div className="absolute bottom-4 left-4 z-10">
           <button
