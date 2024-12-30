@@ -113,6 +113,11 @@ interface ShakeSettings {
   motionThreshold: number
 }
 
+// Add this type declaration for iOS 13+ devices
+type DeviceMotionEventiOS = DeviceMotionEvent & {
+  requestPermission?: () => Promise<'granted' | 'denied'>
+}
+
 function InstancedSpheres({ number = 100, shakeSettings, shake }: { number?: number; shakeSettings: ShakeSettings; shake: boolean }) {
   const [ref, api] = useSphere(
     (index) => ({
@@ -178,9 +183,11 @@ function App() {
   const [motionPermission, setMotionPermission] = useState(false)
 
   const requestMotionPermission = () => {
-    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-      DeviceMotionEvent.requestPermission()
-        .then(permissionState => {
+    const iOS13PlusDevice = typeof (DeviceMotionEvent as DeviceMotionEventiOS).requestPermission === 'function'
+
+    if (iOS13PlusDevice) {
+      (DeviceMotionEvent as DeviceMotionEventiOS).requestPermission()
+        .then((permissionState: string) => {
           if (permissionState === 'granted') {
             setMotionPermission(true)
             window.addEventListener('devicemotion', handleMotion)
@@ -206,7 +213,7 @@ function App() {
     (event: DeviceMotionEvent) => {
       if (event.acceleration) {
         const { x, y, z } = event.acceleration
-        const acceleration = Math.sqrt(x! * x! + y! * y! + z! * z!)
+        const acceleration = Math.sqrt((x ?? 0) ** 2 + (y ?? 0) ** 2 + (z ?? 0) ** 2)
         if (acceleration > shakeSettings.motionThreshold) {
           setShake(true)
           setTimeout(() => setShake(false), 100) // Reset shake after a short delay
