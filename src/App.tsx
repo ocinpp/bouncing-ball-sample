@@ -2,7 +2,7 @@ import type { PlaneProps } from '@react-three/cannon'
 import { Physics, usePlane, useSphere, useContactMaterial } from '@react-three/cannon'
 import type { MeshPhongMaterialProps } from '@react-three/fiber'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { useMemo, useRef, useState, useEffect } from 'react'
+import { useMemo, useRef, useState, useEffect, useCallback } from 'react'
 import type { InstancedMesh, Mesh } from 'three'
 import { Color } from 'three'
 import * as dat from 'lil-gui'
@@ -110,6 +110,7 @@ function Plane({ color, ...props }: OurPlaneProps) {
 
 interface ShakeSettings {
   shakeStrength: number
+  motionThreshold: number
 }
 
 function InstancedSpheres({ number = 100, shakeSettings, shake }: { number?: number; shakeSettings: ShakeSettings; shake: boolean }) {
@@ -174,16 +175,53 @@ function Scene({ shakeSettings, shake }: { shakeSettings: ShakeSettings; shake: 
 }
 
 function App() {
+  const [motionPermission, setMotionPermission] = useState(false)
+
+  const requestMotionPermission = () => {
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      DeviceMotionEvent.requestPermission()
+        .then(permissionState => {
+          if (permissionState === 'granted') {
+            setMotionPermission(true)
+            window.addEventListener('devicemotion', handleMotion)
+          }
+        })
+        .catch(console.error)
+    } else {
+      // handle regular non iOS 13+ devices
+      setMotionPermission(true)
+      if (typeof window !== 'undefined' && 'DeviceMotionEvent' in window) {
+        window.addEventListener('devicemotion', handleMotion)
+      }
+    }
+  }
+
   const [shakeSettings] = useState<ShakeSettings>({
     shakeStrength: 10,
+    motionThreshold: 15,
   })
   const [shake, setShake] = useState(false)
+
+  const handleMotion = useCallback(
+    (event: DeviceMotionEvent) => {
+      if (event.acceleration) {
+        const { x, y, z } = event.acceleration
+        const acceleration = Math.sqrt(x! * x! + y! * y! + z! * z!)
+        if (acceleration > shakeSettings.motionThreshold) {
+          setShake(true)
+          setTimeout(() => setShake(false), 100) // Reset shake after a short delay
+        }
+      }
+    },
+    [shakeSettings.motionThreshold]
+  )
 
   useEffect(() => {
     const gui = new dat.GUI()
     const shakeFolder = gui.addFolder('Shake Settings')
 
     shakeFolder.add(shakeSettings, 'shakeStrength', 1, 20).name('Shake Strength')
+    shakeFolder.add(shakeSettings, 'motionThreshold', 5, 30).name('Motion Threshold')
 
     const shakeButton = { shake: () => {
       setShake(true)
@@ -195,27 +233,42 @@ function App() {
 
     return () => {
       gui.destroy()
+      if (motionPermission) {
+        window.removeEventListener('devicemotion', handleMotion)
+      }
     }
-  }, [shakeSettings])
+  }, [handleMotion, shakeSettings, motionPermission])
 
   return (
-    <Canvas camera={{ position: [0, 0, 40] }} shadows>
-      <hemisphereLight intensity={0.35 * Math.PI} />
-      <spotLight
-        angle={0.3}
-        castShadow
-        decay={0}
-        intensity={2 * Math.PI}
-        penumbra={1}
-        position={[30, 0, 30]}
-        shadow-mapSize-width={256}
-        shadow-mapSize-height={256}
-      />
-      <pointLight decay={0} intensity={0.5 * Math.PI} position={[-30, 0, -30]} />
-      <Physics gravity={[0, 0, -10]}>
-        <Scene shakeSettings={shakeSettings} shake={shake} />
-      </Physics>
-    </Canvas>
+    <div className="relative w-full h-screen">
+      {!motionPermission && (
+        <div className="absolute top-4 left-4 z-10">
+          <button
+            onClick={requestMotionPermission}
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          >
+            Enable Motion Detection
+          </button>
+        </div>
+      )}
+      <Canvas camera={{ position: [0, 0, 40] }} shadows>
+        <hemisphereLight intensity={0.35 * Math.PI} />
+        <spotLight
+          angle={0.3}
+          castShadow
+          decay={0}
+          intensity={2 * Math.PI}
+          penumbra={1}
+          position={[30, 0, 30]}
+          shadow-mapSize-width={256}
+          shadow-mapSize-height={256}
+        />
+        <pointLight decay={0} intensity={0.5 * Math.PI} position={[-30, 0, -30]} />
+        <Physics gravity={[0, 0, -10]}>
+          <Scene shakeSettings={shakeSettings} shake={shake} />
+        </Physics>
+      </Canvas>
+    </div>
   )
 }
 
