@@ -113,9 +113,11 @@ interface ShakeSettings {
   motionThreshold: number
 }
 
-// Add this type declaration for iOS 13+ devices
-type DeviceMotionEventiOS = DeviceMotionEvent & {
-  requestPermission?: () => Promise<'granted' | 'denied'>
+// Define a type guard for checking if DeviceMotionEvent has requestPermission
+function isIOS13OrAbove(deviceMotionEvent: typeof DeviceMotionEvent): deviceMotionEvent is {
+  requestPermission: () => Promise<PermissionState>
+} {
+  return typeof (deviceMotionEvent as any).requestPermission === 'function'
 }
 
 function InstancedSpheres({ number = 100, shakeSettings, shake }: { number?: number; shakeSettings: ShakeSettings; shake: boolean }) {
@@ -182,18 +184,17 @@ function Scene({ shakeSettings, shake }: { shakeSettings: ShakeSettings; shake: 
 function App() {
   const [motionPermission, setMotionPermission] = useState(false)
 
-  const requestMotionPermission = () => {
-    const iOS13PlusDevice = typeof (DeviceMotionEvent as DeviceMotionEventiOS).requestPermission === 'function'
-
-    if (iOS13PlusDevice) {
-      (DeviceMotionEvent as DeviceMotionEventiOS).requestPermission()
-        .then((permissionState: string) => {
-          if (permissionState === 'granted') {
-            setMotionPermission(true)
-            window.addEventListener('devicemotion', handleMotion)
-          }
-        })
-        .catch(console.error)
+  const requestMotionPermission = async () => {
+    if (isIOS13OrAbove(DeviceMotionEvent)) {
+      try {
+        const permissionState = await DeviceMotionEvent.requestPermission()
+        if (permissionState === 'granted') {
+          setMotionPermission(true)
+          window.addEventListener('devicemotion', handleMotion)
+        }
+      } catch (error) {
+        console.error('Error requesting motion permission:', error)
+      }
     } else {
       // handle regular non iOS 13+ devices
       setMotionPermission(true)
