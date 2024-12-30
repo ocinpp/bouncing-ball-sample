@@ -114,10 +114,10 @@ interface ShakeSettings {
 }
 
 // Define a type guard for checking if DeviceMotionEvent has requestPermission
-function isIOS13OrAbove(deviceMotionEvent: typeof DeviceMotionEvent): deviceMotionEvent is {
+function hasRequestPermission(deviceMotionEvent: typeof DeviceMotionEvent): deviceMotionEvent is typeof DeviceMotionEvent & {
   requestPermission: () => Promise<PermissionState>
 } {
-  return typeof (deviceMotionEvent as any).requestPermission === 'function'
+  return 'requestPermission' in deviceMotionEvent
 }
 
 function InstancedSpheres({ number = 100, shakeSettings, shake }: { number?: number; shakeSettings: ShakeSettings; shake: boolean }) {
@@ -185,7 +185,7 @@ function App() {
   const [motionPermission, setMotionPermission] = useState(false)
 
   const requestMotionPermission = async () => {
-    if (isIOS13OrAbove(DeviceMotionEvent)) {
+    if (hasRequestPermission(DeviceMotionEvent)) {
       try {
         const permissionState = await DeviceMotionEvent.requestPermission()
         if (permissionState === 'granted') {
