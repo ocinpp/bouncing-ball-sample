@@ -250,7 +250,7 @@ function App() {
   return (
     <div className="relative w-full h-screen">
       {!motionPermission && (
-        <div className="absolute top-4 left-4 z-10">
+        <div className="absolute bottom-4 left-4 z-10">
           <button
             onClick={requestMotionPermission}
             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
